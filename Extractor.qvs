@@ -1,0 +1,889 @@
+﻿///$tab Main
+SET ThousandSep='.';
+SET DecimalSep=',';
+SET MoneyThousandSep='.';
+SET MoneyDecimalSep=',';
+SET MoneyFormat='#.##0,00 €;-#.##0,00 €';
+SET TimeFormat='h:mm:ss';
+SET DateFormat='DD/MM/YYYY';
+SET TimestampFormat='DD/MM/YYYY h:mm:ss[.fff]';
+SET MonthNames='ene;feb;mar;abr;may;jun;jul;ago;sep;oct;nov;dic';
+SET DayNames='lun;mar;mié;jue;vie;sáb;dom';
+//
+//LET vConnection = '[Provider=SQLOLEDB.1;Persist Security Info=True;User ID=gcs;Data Source=A4SQL025T.fcc.intfcc.local\CONS2K121;Use Procedure for Prepare=1;Auto Translate=True;Packet Size=4096;Workstation ID=LENOVOLAURA;Use Encryption for Data=False;Tag with column collation when possible=False] (XPassword is PRVadAFOEbdCDZMGKZLB);'
+//;
+
+$(Include=..\include_start.txt);
+$(Include=..\include_loadDates.txt);
+
+OLEDB CONNECT TO $(vConnection)
+;
+///$tab VERSION
+// En esta pestaña se registran los cambios realizados en el informe para realizar el control de backups
+
+// ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
+//	Fecha		Redmine		Incidencia																				Solución
+// ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
+
+// 20221108		-			Actualización Fecha Emisión Facturas											Se añade la tabla DIV_INDEMNIZACIONES para leer el campo de fecha de emisión de la facturación
+// 20221116		-			Actualización Estados Incumplimientos Gesred									Se añade la tabla GR_ESTADOS_INCUMPLI para obtener los estados de incumplimiento [EI_CD_ESTADO]/[EI_DS_ESTADO]
+// 20221116		-			Añadimos las reclamaciones pendientes de Diversa								Se añade de la tabla DIV_Proc_Gen_Pena_Det los casos pendientes 
+// 20221128		-			Se quitan del Loop temporal de carga las tablas sin temporalidad en la carga 	DIV_Proc_Gen_Pena_Det, DIV_Penalizaciones, DIV_Recl_Ser, DIV_Ctt_Recl, DIV_OrdenSer, DIV_OrdenReclSer, DIV_Tipo_Relacion_Cli, GR_INCUMPLIMIENTOS, GR_ACOMETIDA_SC, GR_PRES, GR_SERV_TIPO_USO, GR_TIPO_ESPE, GR_OT, GR_AVIS, GR_AVIS_OT, GR_OT_HIST_ESTADO, GR_OT_PROPIEDADES, GR_ESTADOS_OT, GR_ESPE_OT, DIV_Facturas		
+// 20230215		-			Se desestiman de pendientes aquellas sin contrato								Se pone en la tabla DIV_PROC_GEN_PENA_PENDIENTES_S0 la condición whent cd_ctt is not null
+///$tab DIV - PENALIZACIONES
+// Prefijo DIV -> Origen: DIVERSA
+
+DIV_PENALIZACIONES_S0:
+LOAD
+	*
+;
+SQL 
+SELECT
+	*
+FROM [AQ_Italia_Auditoria].[dbo].[DIV_Penalizaciones]
+
+;
+
+CALL StoreQVD_S0('DIV_PENALIZACIONES_S0')
+DROP TABLE DIV_PENALIZACIONES_S0;
+
+
+
+DIV_PROC_GEN_PENA_DET_S0:
+LOAD
+	*
+;
+SQL 
+SELECT
+	*
+FROM [AQ_Italia_Auditoria].[dbo].[DIV_Proc_Gen_Pena_Det]
+ where [flg_genera_pena]>=0
+;
+
+CALL StoreQVD_S0('DIV_PROC_GEN_PENA_DET_S0')
+DROP TABLE DIV_PROC_GEN_PENA_DET_S0;
+
+
+DIV_INDEMNIZACIONES_S0:
+LOAD
+	*
+;
+
+SQL 
+SELECT
+	*
+FROM [AQ_Italia_Auditoria].[dbo].[DIV_INDEMNIZACIONES]
+;
+
+CALL StoreQVD_S0('DIV_INDEMNIZACIONES_S0')
+DROP TABLE DIV_INDEMNIZACIONES_S0;
+
+
+//20221116: Añadimos las reclamaciones pendientes de Diversa
+
+DIV_PROC_GEN_PENA_PENDIENTES_S0:
+LOAD
+	*
+;
+SQL 
+SELECT
+	*
+FROM [AQ_Italia_Auditoria].[dbo].[DIV_Proc_Gen_Pena_Det]
+where ([fech_ini_ind]='1900-01-01 00:00:00.000' or [fech_fin_ind]='1900-01-01 00:00:00.000') 
+and ([texto_inci] NOT LIKE '%DESESTIMADA%') and [cod_ctt] is not null
+;
+
+CALL StoreQVD_S0('DIV_PROC_GEN_PENA_PENDIENTES_S0')
+DROP TABLE DIV_PROC_GEN_PENA_PENDIENTES_S0;
+///$tab RECL_SER
+// Prefijo DIV -> Origen: DIVERSA
+
+RECL_SER_S0:
+LOAD
+	*
+;
+SQL 
+SELECT
+	*
+FROM [AQ_Italia_Auditoria].[dbo].[DIV_Recl_Ser]
+;
+
+CALL StoreQVD_S0('RECL_SER_S0')
+DROP TABLE RECL_SER_S0;
+///$tab CTT_RECL
+// Prefijo DIV -> Origen: DIVERSA
+
+CTT_RECL_S0:
+LOAD
+	*
+;
+SQL 
+SELECT
+	*
+FROM [AQ_Italia_Auditoria].[dbo].[DIV_Ctt_Recl]
+;
+
+CALL StoreQVD_S0('CTT_RECL_S0')
+DROP TABLE CTT_RECL_S0;
+///$tab ORDEN_SER
+// Prefijo DIV -> Origen: DIVERSA
+
+ORDEN_SER_S0:
+LOAD
+	*
+;
+
+SQL 
+SELECT
+	*
+FROM [AQ_Italia_Auditoria].[dbo].[DIV_OrdenSer]
+;
+
+CALL StoreQVD_S0('ORDEN_SER_S0')
+DROP TABLE ORDEN_SER_S0;
+
+
+ORDEN_RECL_SER_S0:
+LOAD
+	*
+;
+
+SQL 
+SELECT
+	*
+FROM [AQ_Italia_Auditoria].[dbo].[DIV_OrdenReclSer]
+;
+
+CALL StoreQVD_S0('ORDEN_RECL_SER_S0')
+DROP TABLE ORDEN_RECL_SER_S0;
+///$tab TIPO_RELACION_CLI
+// Prefijo DIV -> Origen: DIVERSA
+
+TIPO_RELACION_CLI_S0:
+LOAD
+	*
+;
+
+SQL 
+SELECT
+	*
+FROM [AQ_Italia_Auditoria].[dbo].[DIV_Tipo_Relacion_Cli]
+;
+
+CALL StoreQVD_S0('TIPO_RELACION_CLI_S0')
+DROP TABLE TIPO_RELACION_CLI_S0;
+///$tab GR_INCUMPLIM
+// Prefijo GR -> Origen: GESRED
+
+GR_INCUMPLIMIENTOS_S0:
+SQL
+SELECT
+*
+FROM [AQ_Italia_Auditoria].[dbo].[GR_INCUMPLIMIENTOS]
+WHERE [IN_CD_SERVICIO_PRES]=596 AND CC_DT_FECHA_BAJA IS NULL // 144652
+//AND ([IN_CD_DESESTIMADO]=0 OR [IN_CD_DESESTIMADO] IS NULL)
+//AND [IN_DT_FECHA_FIN_EVOLUCION] is not null
+//AND [IN_DT_FECHA_FIN_COMPARACION] is not null
+;
+CALL StoreQVD_S0('GR_INCUMPLIMIENTOS_S0')
+DROP TABLE GR_INCUMPLIMIENTOS_S0;
+///$tab GR_ACOMETIDAS
+// Prefijo GR -> Origen: GESRED
+
+GR_ACOMETIDA_SC_S0:
+LOAD
+*
+;
+
+SQL
+SELECT
+*
+FROM [AQ_Italia_Auditoria].[dbo].[GR_ACOMETIDA_SC]
+WHERE CC_DT_FECHA_BAJA IS NULL // 144652
+;
+
+CALL StoreQVD_S0('GR_ACOMETIDA_SC_S0')
+DROP TABLE GR_ACOMETIDA_SC_S0;
+///$tab GR_PRES
+// Prefijo GR -> Origen: GESRED
+
+GR_PRES_S0:
+LOAD
+	*
+;
+
+SQL 
+SELECT
+	*
+FROM [AQ_Italia_Auditoria].[dbo].[GR_PRES]
+WHERE CC_DT_FECHA_BAJA IS NULL // 144652
+;
+
+CALL StoreQVD_S0('GR_PRES_S0')
+DROP TABLE GR_PRES_S0;
+///$tab GR_SERV_TIPO_USO
+// Prefijo GR -> Origen: GESRED
+
+GR_SERV_TIPO_USO_S0:
+LOAD
+	*
+;
+
+SQL 
+SELECT
+	*
+FROM [AQ_Italia_Auditoria].[dbo].[GR_SERV_TIPO_USO]
+WHERE CC_DT_FECHA_BAJA IS NULL // 144652
+;
+
+CALL StoreQVD_S0('GR_SERV_TIPO_USO_S0')
+DROP TABLE GR_SERV_TIPO_USO_S0;
+///$tab GR_TIPO_ESPE
+// Prefijo GR -> Origen: GESRED
+
+GR_TIPO_ESPE_S0:
+LOAD
+	*
+;
+
+SQL 
+SELECT
+	*
+FROM [AQ_Italia_Auditoria].[dbo].[GR_TIPO_ESPE]
+WHERE CC_DT_FECHA_BAJA IS NULL // 144652
+;
+
+CALL StoreQVD_S0('GR_TIPO_ESPE_S0')
+DROP TABLE GR_TIPO_ESPE_S0;
+///$tab GR_OT
+// Prefijo GR -> Origen: GESRED
+
+GR_OT_S0:
+LOAD
+	*
+;
+
+SQL 
+SELECT
+	*
+FROM [AQ_Italia_Auditoria].[dbo].[GR_OT]
+WHERE CC_DT_FECHA_BAJA IS NULL // 144652
+;
+
+CALL StoreQVD_S0('GR_OT_S0')
+DROP TABLE GR_OT_S0;
+///$tab GR_AVISOS
+// Prefijo GR -> Origen: GESRED
+
+GR_AVIS_S0:
+LOAD
+	*
+;
+
+SQL 
+SELECT
+	*
+FROM [AQ_Italia_Auditoria].[dbo].[GR_AVIS]
+WHERE CC_DT_FECHA_BAJA IS NULL // 144652
+;
+
+CALL StoreQVD_S0('GR_AVIS_S0')
+DROP TABLE GR_AVIS_S0;
+
+
+GR_AVIS_OT_S0:
+LOAD
+	*
+;
+
+SQL 
+SELECT
+	*
+FROM [AQ_Italia_Auditoria].[dbo].[GR_AVIS_OT]
+WHERE CC_DT_FECHA_BAJA IS NULL // 144652
+;
+
+CALL StoreQVD_S0('GR_AVIS_OT_S0')
+DROP TABLE GR_AVIS_OT_S0;
+///$tab GR_OT_HIST_ESTADO
+// Prefijo GR -> Origen: GESRED
+
+GR_OT_HIST_ESTADO_S0:
+LOAD
+	*
+;
+
+SQL 
+SELECT
+	*
+FROM [AQ_Italia_Auditoria].[dbo].[GR_OT_HIST_ESTADO]
+WHERE CC_DT_FECHA_BAJA IS NULL // 144652
+;
+
+CALL StoreQVD_S0('GR_OT_HIST_ESTADO_S0')
+DROP TABLE GR_OT_HIST_ESTADO_S0;
+///$tab GR_OT_PROPIEDADES
+// Prefijo GR -> Origen: GESRED
+
+GR_OT_PROPIEDADES_S0:
+LOAD
+	*
+;
+
+SQL 
+SELECT
+	*
+FROM [AQ_Italia_Auditoria].[dbo].[GR_OT_PROPIEDADES]
+WHERE CC_DT_FECHA_BAJA IS NULL // 144652
+;
+
+CALL StoreQVD_S0('GR_OT_PROPIEDADES_S0')
+DROP TABLE GR_OT_PROPIEDADES_S0;
+///$tab GR_ESTADOS_OT
+// Prefijo GR -> Origen: GESRED
+
+GR_ESTADOS_OT_S0:
+LOAD
+	*
+;
+
+SQL 
+SELECT
+	*
+FROM [AQ_Italia_Auditoria].[dbo].[GR_ESTADOS_OT]
+WHERE CC_DT_FECHA_BAJA IS NULL // 144652
+;
+
+CALL StoreQVD_S0('GR_ESTADOS_OT_S0')
+DROP TABLE GR_ESTADOS_OT_S0;
+///$tab GR_ESPERAS
+// Prefijo GR -> Origen: GESRED
+
+GR_ESPERAS_OT_S0:
+LOAD
+	*
+;
+
+SQL 
+SELECT
+	*
+FROM [AQ_Italia_Auditoria].[dbo].[GR_ESPE_OT]
+WHERE CC_DT_FECHA_BAJA IS NULL // 144652
+;
+
+CALL StoreQVD_S0('GR_ESPERAS_OT_S0')
+DROP TABLE GR_ESPERAS_OT_S0;
+///$tab DIV_FACTURAS_29_31
+// Prefijo DIV -> Origen: DIVERSA
+
+//// INDICADORES 29 y 31 - PLAZO PARA EMISION FACTURAS y PLAZO PARA EL PAGO DEL RECIBO
+DIV_FACTURAS_S0:
+LOAD
+	*
+;
+
+SQL 
+SELECT
+	*
+FROM [AQ_Italia_Auditoria].[dbo].[DIV_Facturas]
+;
+
+CALL StoreQVD_S0('DIV_FACTURAS_S0')
+DROP TABLE DIV_FACTURAS_S0;
+///$tab STAR LOOP
+DO WHILE vMinYearMonthLoop <= $(vMaxYearMonth)
+		
+		//LET QvConditionMin=date(addmonths(vAQDateFrom , j));
+		LET QvConditionMin=date(vMinDate);
+		
+		LET QvDateMinForSelectTEXT=text(date(QvConditionMin,'YYYYMMDD'));
+	 	
+	 	LET QvYearMonthQVD = text(date(QvConditionMin,'YYYYMM'));
+	 	
+	 	TRACE --> Loop for QvYearMonthQVD: $(QvYearMonthQVD);
+///$tab CPI
+// Prefijo ODS -> Origen: Carga Ficheros Manuales
+
+CPI_S0_$(QvYearMonthQVD):
+LOAD 
+	  YEAR([DATE_ORA_INIZIO_CHIAMATA])*100+MONTH([DATE_ORA_INIZIO_CHIAMATA])		AS fech_mes
+	  ,[ID]
+      ,[DATE_ORA_INIZIO_CHIAMATA]
+      ,[DATE_ORA_ABBANDONO]
+      ,[DATE_RISPOSTA_OPT]
+      ,[NUMERO_CHIAMANTE]
+      ,[ID_CHIAMATA]
+      ,[SERVIZIO]
+      ,[GESTITA_OPERATORE]
+      ,[ESITO_GESTIONE]
+      ,[CPI]
+;
+SELECT
+	*
+FROM [AQ_Italia_Auditoria].[dbo].[ODS_CALTAQUA_CPI]
+WHERE YEAR([DATE_ORA_INIZIO_CHIAMATA])*100+MONTH([DATE_ORA_INIZIO_CHIAMATA])=$(QvYearMonthQVD);
+
+CALL StoreQVD_S0('CPI_S0_$(QvYearMonthQVD)')
+DROP TABLE CPI_S0_$(QvYearMonthQVD);
+
+
+
+CPI_2_S0_$(QvYearMonthQVD):
+LOAD
+ 	  [PERIODO_ANALISIS]				AS fech_mes
+ 	  ,[ID]
+      ,[NUMERO_PROGRESSIVO]
+      ,[AREA_INTERVENTO]
+      ,[CODICE_RINTRACCIABILITA]
+      ,[ID_PRESTAZIONE]
+      ,[COGNOME_LEAD]
+      ,[NOME_LEAD]
+      ,[NUM_CHIAMANTE]
+      ,[TIPOLOGIA]
+      ,[PUNTO_CONSIGNA]
+      ,[TIPI_INTERVENTO]
+      ,[DATTAGLIO]
+      ,[DESCRIZIONE]
+      ,[INIZIO_CHIAMATA]
+      ,[ORA_INIZIO_CHIAMATA]
+      ,[RISPOSTA_OPERATORE]
+      ,[ORA_RISPOSTA_OPERATORE]
+      ,[DATA_ARRIVO_SUL_POSTO]
+      ,[ORA_ARRIVO_SUL_POSTO]
+      ,[MANCATO_RISPETTO_STANDARD]
+      ,[DIFERENZA]
+      ,[TICKET_ID]
+      ,[RIFERIMANTO_REGISTRAZIONE]
+      ,[NOMBRE_FICHERO]
+      ,[PERIODO_ANALISIS]
+;
+
+SQL 
+SELECT
+	*
+FROM [AQ_Italia_Auditoria].[dbo].[ODS_CALTAQUA_PI_TABELLA]
+WHERE [PERIODO_ANALISIS]=$(QvYearMonthQVD)
+;
+
+CALL StoreQVD_S0('CPI_2_S0_$(QvYearMonthQVD)')
+DROP TABLE CPI_2_S0_$(QvYearMonthQVD);
+///$tab CC
+// Prefijo ODS -> Origen: Carga Ficheros Manuales
+
+CC_S0_$(QvYearMonthQVD):
+LOAD 
+	  YEAR([DATE_ORA_INIZIO_CHIAMATA])*100+MONTH([DATE_ORA_INIZIO_CHIAMATA])		AS fech_mes
+	  ,[ID]
+      ,[DATE_ORA_INIZIO_CHIAMATA]
+      ,[DATE_ORA_ABBANDONO]
+      ,[DATE_RISPOSTA_OPT]
+      ,[NUMERO_CHIAMANTE]
+      ,[ID_CHIAMATA]
+      ,[SERVIZIO]
+      ,[GESTITA_OPERATORE]
+      ,[ESITO_GESTIONE]
+      ,[ATTESA]
+
+;
+SELECT
+	*
+FROM [AQ_Italia_Auditoria].[dbo].[ODS_CALTAQUA_CC]
+WHERE YEAR([DATE_ORA_INIZIO_CHIAMATA])*100+MONTH([DATE_ORA_INIZIO_CHIAMATA])=$(QvYearMonthQVD);
+
+CALL StoreQVD_S0('CC_S0_$(QvYearMonthQVD)')
+DROP TABLE CC_S0_$(QvYearMonthQVD);
+///$tab STORICO_CODA
+// Prefijo ODS -> Origen: Carga Ficheros Manuales
+
+STORICO_CODA_S0_$(QvYearMonthQVD):
+LOAD
+	  0																			AS ORIGEN_CODA
+	  ,[ID]
+      ,[DATE_INFO]
+      ,Date(Date([DATE_INFO]) + time([ORA_RICHIESTA],'hh:mm'), 'DD/MM/YYYY hh:mm:ss') as DATE_INFO_INIZIO
+      ,Date(Date([DATE_INFO]) + time([ORA_CHIAMATA], 'hh:mm'), 'DD/MM/YYYY hh:mm:ss') as DATE_INFO_FINE
+      ,IF(ORA_RICHIESTA<'08:30:00.0000000','08:30:00.0000000',ORA_RICHIESTA)	AS [ORA_RICHIESTA]
+      ,[ORA_RICHIESTA]															AS [ORA_RICHIESTA_ORIGINAL]
+      ,[ORA_CHIAMATA]
+      ,[ORA_PRENOTAZIONE]
+      ,[ORA_EVASIONE]
+      ,[TIPO_PRENOTAZIONE]
+      ,[TIPO_CHIAMATA]
+      ,[TIPO_EVASIONE]
+      ,[SERVICIO]
+      ,[NUMERO]
+      ,[BIGLIETTO]
+      ,[CODICE_FISCALE]
+      ,[LINGUA]
+      ,[TIPOLOGIA]
+;
+
+SELECT 
+	*
+FROM [AQ_Italia_Auditoria].[dbo].[ODS_STORICO_CODA_CALTANISSETTA]
+WHERE YEAR([DATE_INFO])*100+MONTH([DATE_INFO])=$(QvYearMonthQVD)
+AND TIPO_EVASIONE = 'Normale'
+;
+
+
+CONCATENATE(STORICO_CODA_S0_$(QvYearMonthQVD))
+LOAD
+	  1						AS ORIGEN_CODA
+	  ,[ID]
+	  ,DATE_INFO
+      ,Date(Date([DATE_INFO]) + time(PRENOTAZIONE, 'hh:mm'), 'DD/MM/YYYY hh:mm:ss') as DATE_INFO_INIZIO
+      ,Date(Date([DATE_INFO]) + time(CHIAMATA, 'hh:mm'), 'DD/MM/YYYY hh:mm:ss') as DATE_INFO_FINE
+      ,[PRENOTAZIONE]		AS [ORA_RICHIESTA]
+      ,[CHIAMATA]			AS [ORA_CHIAMATA]
+      ,[INIZIO]				AS [ORA_PRENOTAZIONE]
+      ,[FINE]				AS [ORA_EVASIONE]
+      ,[APPUNTAMENTO]
+      ,[TIPO_PRENOTAZIONE]
+      ,[TIPO_CHIAMATA]
+      ,[TIPO_EVASIONE]
+      ,[SERVICIO]
+      ,[SERVICIO_EFFETTIVO]
+      ,[NUMERO]
+      ,[BIGLIETTO]
+      ,[CODICE_FISCALE]
+      ,[LINGUA]
+      ,[TIPOLOGIA]
+      ,[COMUNE]
+      ,[CONTATTO]
+;
+
+SELECT 
+	*
+FROM [AQ_Italia_Auditoria].[dbo].[ODS_STORICO_CODA_GELA]
+WHERE YEAR([DATE_INFO])*100+MONTH([DATE_INFO])=$(QvYearMonthQVD)
+AND TIPO_EVASIONE = 'Normale'
+;
+
+CALL StoreQVD_S0('STORICO_CODA_S0_$(QvYearMonthQVD)')
+DROP TABLE STORICO_CODA_S0_$(QvYearMonthQVD);
+///$tab DIV_FACTURAS
+// Prefijo DIV -> Origen: DIVERSA
+
+//// INDICADOR 30 - FRECUENCIA DE FACTURACIÓN
+DIV_Frec_Fact_AG_S0_$(QvYearMonthQVD):
+LOAD
+	*
+;
+
+SQL 
+SELECT
+	*
+FROM [AQ_Italia_Auditoria].[dbo].[DIV_Frec_Fact_AG]
+WHERE LEFT([Fecha_Info],6)=$(QvYearMonthQVD);
+
+CALL StoreQVD_S0('DIV_Frec_Fact_AG_S0_$(QvYearMonthQVD)')
+DROP TABLE DIV_Frec_Fact_AG_S0_$(QvYearMonthQVD);
+///$tab DIV_FACTURAS_DETALLE
+// Prefijo DIV -> Origen: DIVERSA
+
+//// INDICADOR 30 - FRECUENCIA FACTURAS
+DIV_Frec_Factura_DET_S0_$(QvYearMonthQVD):
+LOAD
+	*
+;
+
+SQL 
+SELECT
+	*
+FROM [AQ_Italia_Auditoria].[dbo].[DIV_Frec_Fact_DET]
+WHERE LEFT([Fecha_Info],6)=$(QvYearMonthQVD);
+
+CALL StoreQVD_S0('DIV_Frec_Factura_DET_S0_$(QvYearMonthQVD)')
+DROP TABLE DIV_Frec_Factura_DET_S0_$(QvYearMonthQVD);
+///$tab END LOOP
+
+		LET vMinDate=date(addmonths(vMinDate , 1));
+		
+		LET vMinYearMonthLoop =  Year(vMinDate)&Num(Month(vMinDate),'00');
+
+
+
+LOOP;
+///$tab DIV_ESPERAS_RELACIONES
+// Prefijo DIV -> Origen: DIVERSA
+
+DIV_ESPERAS_RELACIONES_S0:
+LOAD
+	cod_ind,
+	cns_recl_ser,
+	fech_ini_ind,
+	fech_fin_ind,
+    fech_ini_est_recl,
+	fech_fin_est_recl
+;
+SQL
+SELECT 
+	e.cod_inst, 
+	p.cod_ind, 
+	e.cns_recl_ser,
+	p.fech_ini_ind,
+	p.fech_fin_ind,
+	fech_ini_est_recl,
+	fech_fin_est_recl
+FROM [AQ_Italia_Auditoria].[dbo].[DIV_PROC_GEN_PENA_DET] p, [AQ_Italia_Auditoria].[dbo].[DIV_Estado_Recl] e
+WHERE p.cod_inst = 23901
+   AND p.cod_ind IN (32,34,35)
+   AND p.cns_recl_ser IS NOT NULL
+   AND p.cns_orden_ser IS NULL
+   AND p.flg_genera_pena >= 0
+   AND e.cod_inst = p.cod_inst
+   AND e.cns_recl_ser = p.cns_recl_ser
+   AND e.est_recl = 9
+;
+
+CALL StoreQVD_S0('DIV_ESPERAS_RELACIONES_S0')
+DROP TABLE DIV_ESPERAS_RELACIONES_S0;
+///$tab DIV_ESPERAS_ORDENES
+// Prefijo DIV -> Origen: DIVERSA
+
+DIV_ESPERAS_ORDENES_S0:
+LOAD
+	cod_ind,
+	cns_orden_ser,
+	fech_ini_ind,
+	fech_fin_ind,
+    fech_ini_est_orden,
+	fech_fin_est_orden
+;
+SQL
+SELECT 
+	e.cod_inst, 
+	p.cod_ind, 
+	e.cns_orden_ser,
+	p.fech_ini_ind,
+	p.fech_fin_ind,
+	fech_ini_est_orden,
+	fech_fin_est_orden
+FROM [AQ_Italia_Auditoria].[dbo].[DIV_PROC_GEN_PENA_DET] p, [AQ_Italia_Auditoria].[dbo].[DIV_Estado_Orden] e
+WHERE p.cod_inst      = 23901
+   AND p.cod_ind       = 12
+   AND p.cns_orden_ser IS NOT NULL
+   AND p.flg_genera_pena >= 0
+   AND e.cod_inst      = p.cod_inst
+   AND e.cns_orden_ser = p.cns_orden_ser
+   AND e.est_orden     = 3
+;
+
+CALL StoreQVD_S0('DIV_ESPERAS_ORDENES_S0')
+DROP TABLE DIV_ESPERAS_ORDENES_S0;
+///$tab MAESTROS DETALLE FACT
+// Prefijo DIV -> Origen: DIVERSA
+
+MAE_COD_TIP_CLIENTE_S0:
+SQL
+SELECT
+*
+FROM [AQ_Italia_Auditoria].[dbo].[DIV_Mae_Tip_Cli];
+
+CALL StoreQVD_S0('MAE_COD_TIP_CLIENTE_S0')
+DROP TABLE MAE_COD_TIP_CLIENTE_S0;
+
+
+MAE_PLANTILLAS_S0:
+SQL
+SELECT
+*
+FROM [AQ_Italia_Auditoria].[dbo].[DIV_Mae_Plantillas]
+;
+
+CALL StoreQVD_S0('MAE_PLANTILLAS_S0')
+DROP TABLE MAE_PLANTILLAS_S0;
+
+
+MAE_DEF_CAMPOS_FACT_S0:
+SQL
+SELECT
+*
+FROM [AQ_Italia_Auditoria].[dbo].[DIV_Mae_def_camp_factcn]
+;
+
+CALL StoreQVD_S0('MAE_DEF_CAMPOS_FACT_S0')
+DROP TABLE MAE_DEF_CAMPOS_FACT_S0;
+///$tab INCIDENCIAS
+// Prefijo DIV -> Origen: DIVERSA
+
+///// LECTURA DE LAS INCIDENCIAS Y PRESTACIONES DESCARTADAS DE DIVERSA
+//// TABLA [DIV_Proc_Gen_Pena_Det]
+//// CUANDO EL FLAG flg_genera_pena=-1
+
+DIV_INCIDENCIAS_DESCARTES_S0:
+LOAD
+	*
+;
+
+SELECT [Id]
+      ,[cod_inst]
+      ,[Fecha_Info]
+      ,[cns_pena_det]
+      ,[cod_proc]
+      ,[cod_ind]
+      ,[cod_ctt]
+      ,[cns_recl_ser]
+      ,[cns_orden_ser]
+      ,[fech_generacion]
+      ,[fech_ini_ind]
+      ,[fech_fin_ind]
+      ,[imp_pena]
+      ,[tiempo_ind]
+      ,[tiempo_pena]
+      ,[flg_genera_pena]
+      ,[texto_inci]
+      ,[Create_Date]
+      ,[Update_Date]
+      ,[Create_User]
+      ,[Update_User]
+FROM [AQ_Italia_Auditoria].[dbo].[DIV_Proc_Gen_Pena_Det]
+where flg_genera_pena<0
+;
+
+CALL StoreQVD_S0('DIV_INCIDENCIAS_DESCARTES_S0')
+DROP TABLE DIV_INCIDENCIAS_DESCARTES_S0;
+///$tab GR - MASTER
+// Prefijo GR -> Origen: GESRED
+
+GR_TIPOS_INCUMPLIMIENTOS_S0:
+SQL
+SELECT
+*
+FROM [AQ_Italia_Auditoria].[dbo].GR_TIPOS_INCUMPLIMIENTOS
+WHERE CC_DT_FECHA_BAJA IS NULL; // 144652
+
+CALL StoreQVD_S0('GR_TIPOS_INCUMPLIMIENTOS_S0')
+DROP TABLE GR_TIPOS_INCUMPLIMIENTOS_S0;
+///$tab MAE_CTT
+// Prefijo DIV -> Origen: DIVERSA
+
+MAE_CTT_S0:
+SQL
+SELECT
+*
+FROM [AQ_Italia_Auditoria].[dbo].[DIV_Mae_CTT];
+
+CALL StoreQVD_S0('MAE_CTT_S0')
+DROP TABLE MAE_CTT_S0;
+///$tab DIV - MAE PENALIZ
+DIV_MAE_INDICADORES_S0:
+LOAD
+	*
+;
+SQL 
+SELECT
+	*
+FROM [AQ_Italia_Auditoria].[dbo].[DIV_Mae_Indicadores]
+order by cod_ind asc;
+
+CALL StoreQVD_S0('DIV_MAE_INDICADORES_S0')
+DROP TABLE DIV_MAE_INDICADORES_S0;
+// Prefijo DIV -> Origen: DIVERSA
+
+
+DIV_MAE_TIP_INDICADOR_S0:
+LOAD
+	*
+;
+SQL 
+SELECT
+	*
+FROM [AQ_Italia_Auditoria].[dbo].[DIV_Mae_Tip_Indicador]
+;
+
+CALL StoreQVD_S0('DIV_MAE_TIP_INDICADOR_S0')
+DROP TABLE DIV_MAE_TIP_INDICADOR_S0;
+
+
+DIV_MOT_DEVOL_PENA_S0:
+LOAD
+	*
+;
+SQL 
+SELECT
+	*
+FROM [AQ_Italia_Auditoria].[dbo].[DIV_Mot_Devol_Pena]
+;
+
+CALL StoreQVD_S0('DIV_MOT_DEVOL_PENA_S0')
+DROP TABLE DIV_MOT_DEVOL_PENA_S0;
+
+DIV_ESTADOS_PENA_S0:
+LOAD
+	*
+;
+SQL 
+SELECT
+	*
+FROM [AQ_Italia_Auditoria].[dbo].[DIV_ESTADOS_PENA]
+;
+
+CALL StoreQVD_S0('DIV_ESTADOS_PENA_S0')
+DROP TABLE DIV_ESTADOS_PENA_S0;
+///$tab MAE_CLASE_RECL
+// Prefijo DIV -> Origen: DIVERSA
+
+MAE_CLASE_RECL_S0:
+LOAD
+	*
+;
+
+SQL 
+SELECT
+	*
+FROM [AQ_Italia_Auditoria].[dbo].[DIV_Mae_Clase_Recl]
+;
+
+CALL StoreQVD_S0('MAE_CLASE_RECL_S0')
+DROP TABLE MAE_CLASE_RECL_S0;
+///$tab MAE_TIPO_USO
+// Prefijo DIV -> Origen: DIVERSA
+
+MAE_TIPO_USO_S0:
+LOAD
+	*
+;
+
+SQL 
+SELECT
+	*
+FROM [AQ_Italia_Auditoria].[dbo].[DIV_Mae_Tipo_Uso]
+;
+
+CALL StoreQVD_S0('MAE_TIPO_USO_S0')
+DROP TABLE MAE_TIPO_USO_S0;
+///$tab MAE_FRECUENCIA
+// Prefijo DIV -> Origen: DIVERSA
+
+MAE_FRECUENCIA_S0:
+LOAD
+	*
+;
+
+SQL 
+SELECT
+	*
+FROM [AQ_Italia_Auditoria].[dbo].[DIV_Mae_Frecuencia]
+;
+
+CALL StoreQVD_S0('MAE_FRECUENCIA_S0')
+DROP TABLE MAE_FRECUENCIA_S0;
+///$tab EST INCUMPLI
+//20221116: Añadimos el maestro de estados de Gesred
+
+MAE_ESTADOS_INCUMPLI_S0:
+LOAD
+	*
+;
+
+SQL 
+SELECT
+	*
+FROM [AQ_Italia_Auditoria].[dbo].[GR_ESTADOS_INCUMPLI]
+;
+
+CALL StoreQVD_S0('MAE_ESTADOS_INCUMPLI_S0')
+DROP TABLE MAE_ESTADOS_INCUMPLI_S0;
+///$tab <--------- END
+exit Script;
